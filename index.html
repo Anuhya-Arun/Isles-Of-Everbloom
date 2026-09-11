@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Isles of Everbloom — V1.1.0</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div id="game-shell">
+
+    <div id="game-container"></div>
+
+    <!-- =====================================================
+         START SCREEN
+    ====================================================== -->
+
+    <div id="start-screen" class="overlay">
+
+        <div class="title-card">
+
+            <div class="eyebrow">
+                A Seasonal Fantasy Adventure
+            </div>
+
+            <h1>Isles of Everbloom</h1>
+
+            <p>
+                Three enchanted islands await across Everbloom Bay.
+                Explore them in any order, complete their trials,
+                and restore the Seasonal Crystals.
+            </p>
+
+            <div class="season-preview">
+                <span>🌸 Spring</span>
+                <span>🍂 Autumn</span>
+                <span>❄ Winter</span>
+            </div>
+
+            <button id="start-btn">
+                Begin Journey
+            </button>
+
+            <button id="how-btn" class="secondary">
+                How to Play
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HOW TO PLAY
+    ====================================================== -->
+
+    <div id="how-screen" class="overlay hidden">
+
+        <div class="panel">
+
+            <div class="panel-symbol">✦</div>
+
+            <h2>How to Play</h2>
+
+            <p>
+                <b>WASD / Arrow Keys</b><br>
+                Explore the islands.
+            </p>
+
+            <p>
+                <b>E</b><br>
+                Talk to characters and enter challenges.
+            </p>
+
+            <p>
+                <b>ESC</b><br>
+                Pause your journey.
+            </p>
+
+            <p>
+                🌸 Spring, 🍂 Autumn and ❄ Winter
+                are available from the beginning.
+                Choose whichever island you wish.
+            </p>
+
+            <button id="how-back">
+                Return
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HUD
+    ====================================================== -->
+
+    <div id="hud">
+
+        <div class="hud-title">
+            ISLES OF EVERBLOOM
+        </div>
+
+        <div class="hud-item">
+            SCORE
+            <span id="score">0</span>
+        </div>
+
+        <div class="hud-item">
+            CRYSTALS
+            <span id="crystals">0 / 3</span>
+        </div>
+
+        <div class="hud-objective">
+            OBJECTIVE
+            <span id="objective-text">
+                Explore Everbloom Bay
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INTERACTION PROMPT
+    ====================================================== -->
+
+    <div id="interaction-prompt">
+
+        <span class="key">E</span>
+
+        <span id="interaction-text">
+            Interact
+        </span>
+
+    </div>
+
+
+    <!-- =====================================================
+         DIALOGUE
+    ====================================================== -->
+
+    <div id="dialogue-box">
+
+        <div id="dialogue-character">
+            MIRA
+        </div>
+
+        <div id="dialogue-text"></div>
+
+        <div class="dialogue-hint">
+            Press E to continue
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PAUSE
+    ====================================================== -->
+
+    <div id="pause-menu" class="overlay hidden">
+
+        <div class="panel">
+
+            <div class="panel-symbol">
+                ❧
+            </div>
+
+            <h2>Journey Paused</h2>
+
+            <button id="resume-btn">
+                Resume
+            </button>
+
+            <button id="restart-btn" class="secondary">
+                Restart Journey
+            </button>
+
+            <button id="menu-btn" class="secondary">
+                Main Menu
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TOAST
+    ====================================================== -->
+
+    <div id="toast"></div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>

@@ -68,6 +68,13 @@ let challengeTimers = [];
 let challengeState = null;
 let challengeUI = null;
 let worldTransitionActive = false;
+let magicTransitionObjects = [];
+let magicTransitionTweens = [];
+
+let musicContext = null;
+let musicGain = null;
+let musicTimer = null;
+let musicStep = 0;
 
 
 /* ============================================================
@@ -265,6 +272,8 @@ function beginGame() {
     player.setVisible(true);
     playerVisual.setVisible(true);
 
+    startAmbientMusic();
+
     gameState.objective =
         "Choose Spring, Autumn or Winter in any order";
 
@@ -326,6 +335,8 @@ function returnToMenu() {
 
     gameState.started = false;
     gameState.paused = false;
+
+    stopAmbientMusic();
 
     pauseMenu.classList.add("hidden");
     howScreen.classList.add("hidden");
@@ -411,15 +422,147 @@ function showToast(message) {
 }
 
 
+function startAmbientMusic() {
+
+    if (!window.AudioContext && !window.webkitAudioContext) {
+        return;
+    }
+
+    if (!musicContext) {
+        const AudioContextClass =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        musicContext = new AudioContextClass();
+        musicGain = musicContext.createGain();
+        musicGain.gain.value = 0.36;
+        musicGain.connect(musicContext.destination);
+    }
+
+    if (musicContext.state === "suspended") {
+        musicContext.resume();
+    }
+
+    if (musicTimer) {
+        return;
+    }
+
+    const melody = [
+        523.25, 659.25, 783.99, 659.25,
+        587.33, 698.46, 880.00, 698.46,
+        523.25, 659.25, 783.99, 987.77,
+        880.00, 783.99, 659.25, 587.33
+    ];
+
+    const playNote = () => {
+
+        if (!musicContext || !musicGain) {
+            return;
+        }
+
+        const now = musicContext.currentTime;
+        const oscillator = musicContext.createOscillator();
+        const noteGain = musicContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = melody[musicStep % melody.length];
+
+        noteGain.gain.setValueAtTime(0.0001, now);
+        noteGain.gain.exponentialRampToValueAtTime(0.32, now + 0.04);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+
+        oscillator.connect(noteGain);
+        noteGain.connect(musicGain);
+        oscillator.start(now);
+        oscillator.stop(now + 0.76);
+
+        musicStep++;
+    };
+
+    playNote();
+    musicTimer = window.setInterval(playNote, 760);
+}
+
+
+function stopAmbientMusic() {
+
+    if (musicTimer) {
+        window.clearInterval(musicTimer);
+        musicTimer = null;
+    }
+
+    if (musicContext) {
+        musicContext.close();
+        musicContext = null;
+        musicGain = null;
+    }
+
+    musicStep = 0;
+}
+
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+        if (!musicContext) {
+            return;
+        }
+
+        if (document.hidden) {
+            if (musicTimer) {
+                window.clearInterval(musicTimer);
+                musicTimer = null;
+            }
+
+            const now = musicContext.currentTime;
+
+            musicGain.gain.cancelScheduledValues(now);
+            musicGain.gain.setTargetAtTime(
+                0.0001,
+                now,
+                0.025
+            );
+
+            musicContext.suspend();
+        } else if (gameState.started) {
+            musicContext.resume().then(() => {
+
+                if (!musicContext || !musicGain || musicTimer) {
+                    return;
+                }
+
+                const now = musicContext.currentTime;
+
+                musicGain.gain.cancelScheduledValues(now);
+                musicGain.gain.setValueAtTime(0.0001, now);
+                musicGain.gain.linearRampToValueAtTime(
+                    0.36,
+                    now + 0.35
+                );
+
+                startAmbientMusic();
+            });
+        }
+    }
+);
+
+window.addEventListener(
+    "pagehide",
+    stopAmbientMusic
+);
+
+
 /* ============================================================
    DIALOGUE
    ============================================================ */
 
 let dialogueLines = [];
 let dialogueIndex = 0;
+let dialogueCompleteAction = null;
 
 
-function openDialogue(character, lines) {
+function openDialogue(character, lines, onComplete = null) {
 
     if (gameState.mode === "challenge") return;
 
@@ -430,6 +573,7 @@ function openDialogue(character, lines) {
 
     dialogueLines = lines;
     dialogueIndex = 0;
+    dialogueCompleteAction = onComplete;
 
     dialogueText.textContent =
         dialogueLines[dialogueIndex];
@@ -448,7 +592,13 @@ function handleDialogueAdvance() {
 
     if (dialogueIndex >= dialogueLines.length) {
 
+        const action = dialogueCompleteAction;
+
         closeDialogue();
+
+        if (action) {
+            action();
+        }
 
         return;
     }
@@ -466,6 +616,7 @@ function closeDialogue() {
 
     dialogueLines = [];
     dialogueIndex = 0;
+    dialogueCompleteAction = null;
 }
 
 
@@ -478,6 +629,8 @@ function handleInteraction() {
     if (!gameState.started) return;
 
     if (gameState.paused) return;
+
+    if (worldTransitionActive) return;
 
     if (gameState.mode === "challenge") return;
 
@@ -499,6 +652,13 @@ function handleInteraction() {
 
         case "mira":
             talkToMira();
+            break;
+
+        case "seasonMermaid":
+            talkToSeasonMermaid(
+                data.season,
+                data.name
+            );
             break;
 
         case "spring":
@@ -595,6 +755,22 @@ function talkToMira() {
 }
 
 
+function talkToSeasonMermaid(season, name) {
+
+    const data = getSeasonData(season);
+
+    openDialogue(
+        name,
+        [
+            `Welcome, traveller. I am ${name}, keeper of ${data.name}.`,
+            `The ${data.shortName} realm is ready for you. Its two challenges guard the Seasonal Crystal.`,
+            "When you are ready, press E once more and I will guide you through the gate."
+        ],
+        () => enterIsland(season)
+    );
+}
+
+
 /* ============================================================
    WORLD MANAGEMENT
    ============================================================ */
@@ -621,6 +797,143 @@ function trackTween(tween) {
 function animateWorldEntry(color = 0x0b2630) {
     scene.cameras.main.resetFX();
     worldTransitionActive = false;
+}
+
+
+function clearMagicTransition() {
+
+    magicTransitionTweens.forEach(
+        tween => tween.stop()
+    );
+
+    magicTransitionTweens = [];
+
+    magicTransitionObjects.forEach(
+        object => object.destroy()
+    );
+
+    magicTransitionObjects = [];
+}
+
+
+function transitionThroughPortal(season) {
+
+    if (worldTransitionActive) {
+        return;
+    }
+
+    worldTransitionActive = true;
+    clearMagicTransition();
+
+    const width = scene.scale.width;
+    const height = scene.scale.height;
+    const data = getSeasonData(season);
+
+    const veil =
+        scene.add.rectangle(
+            width / 2,
+            height / 2,
+            width,
+            height,
+            0x071a21,
+            0
+        );
+
+    veil.setScrollFactor(0);
+    veil.setDepth(200);
+    magicTransitionObjects.push(veil);
+
+    const portal =
+        scene.add.graphics();
+
+    portal.setScrollFactor(0);
+    portal.setDepth(201);
+    portal.lineStyle(8, data.accent, 0.95);
+    portal.strokeEllipse(width / 2, height / 2, 180, 260);
+    portal.lineStyle(3, data.secondary, 0.8);
+    portal.strokeEllipse(width / 2, height / 2, 240, 320);
+    portal.fillStyle(data.accent, 0.12);
+    portal.fillEllipse(width / 2, height / 2, 150, 225);
+    magicTransitionObjects.push(portal);
+
+    const title =
+        scene.add.text(
+            width / 2,
+            height / 2 + 190,
+            `Entering ${data.name}`,
+            {
+                fontFamily: "Georgia",
+                fontSize: "22px",
+                fontStyle: "bold",
+                color: "#fff4d3",
+                stroke: "#173c45",
+                strokeThickness: 5
+            }
+        );
+
+    title.setOrigin(0.5);
+    title.setScrollFactor(0);
+    title.setDepth(202);
+    magicTransitionObjects.push(title);
+
+    magicTransitionTweens.push(
+        scene.tweens.add({
+            targets: veil,
+            alpha: 0.92,
+            duration: 520,
+            ease: "Quad.easeIn"
+        })
+    );
+
+    magicTransitionTweens.push(
+        scene.tweens.add({
+            targets: portal,
+            scale: {
+                from: 0.55,
+                to: 1.8
+            },
+            angle: 360,
+            alpha: {
+                from: 0.35,
+                to: 1
+            },
+            duration: 900,
+            ease: "Cubic.easeIn",
+            onComplete: () => {
+
+                clearMagicTransition();
+                buildIsland(season);
+                worldTransitionActive = true;
+
+                const exitVeil =
+                    scene.add.rectangle(
+                        scene.scale.width / 2,
+                        scene.scale.height / 2,
+                        scene.scale.width,
+                        scene.scale.height,
+                        0x071a21,
+                        0.9
+                    );
+
+                exitVeil.setScrollFactor(0);
+                exitVeil.setDepth(200);
+                magicTransitionObjects.push(exitVeil);
+
+                magicTransitionTweens.push(
+                    scene.tweens.add({
+                        targets: exitVeil,
+                        alpha: 0,
+                        duration: 700,
+                        ease: "Quad.easeOut",
+                        onComplete: () => {
+                            clearMagicTransition();
+                            worldTransitionActive = false;
+                        }
+                    })
+                );
+            }
+        })
+    );
 }
 
 
@@ -700,6 +1013,14 @@ function buildHub() {
         1300,
         1010
     );
+
+    createShoreMermaids([
+        [360, 1120],
+        [760, 1270],
+        [1840, 1180],
+        [2240, 1080],
+        [1280, 1510]
+    ]);
 
     createSeasonTree(
         1300,
@@ -940,6 +1261,21 @@ function createSeasonalDistricts() {
         0xf6d6df
     );
 
+    createSeasonMermaid(
+        "spring",
+        "Liora",
+        420,
+        800,
+        {
+            skin: 0xf3c3a7,
+            tail: 0xe27d8e,
+            fin: 0xffb8c2,
+            hair: 0x3d294d,
+            accent: 0xffd17c
+        },
+        0
+    );
+
     createCherryTree(
         350,
         650,
@@ -1012,6 +1348,21 @@ function createSeasonalDistricts() {
         0xf2b05d
     );
 
+    createSeasonMermaid(
+        "autumn",
+        "Rowan",
+        1920,
+        800,
+        {
+            skin: 0x9b664d,
+            tail: 0x8d79d8,
+            fin: 0xc4b7ff,
+            hair: 0x211f3b,
+            accent: 0xffe28f
+        },
+        1
+    );
+
     createAutumnTree(
         1830,
         650,
@@ -1080,6 +1431,21 @@ function createSeasonalDistricts() {
         "Frostmoon Isle",
         0x8cc5e6,
         0xdaf4ff
+    );
+
+    createSeasonMermaid(
+        "winter",
+        "Neris",
+        1080,
+        430,
+        {
+            skin: 0xf0d1b4,
+            tail: 0x4e91c2,
+            fin: 0x8ed8f2,
+            hair: 0xc16b42,
+            accent: 0xffd67e
+        },
+        2
     );
 
     createPineTree(
@@ -1155,70 +1521,28 @@ function createSeasonGate(
         scene.add.graphics()
     );
 
-    g.fillStyle(
-        0x284c50,
-        1
-    );
+    g.fillStyle(0x284c50, 1);
+    g.fillRoundedRect(x - 72, y - 72, 24, 154, 12);
+    g.fillRoundedRect(x + 48, y - 72, 24, 154, 12);
+    g.fillStyle(mainColor, 1);
+    g.fillRoundedRect(x - 84, y - 84, 48, 18, 9);
+    g.fillRoundedRect(x + 36, y - 84, 48, 18, 9);
 
-    g.fillRoundedRect(
-        x - 75,
-        y - 90,
-        150,
-        180,
-        30
-    );
-
-    g.lineStyle(
-        7,
-        mainColor,
-        1
-    );
-
-    g.strokeRoundedRect(
-        x - 75,
-        y - 90,
-        150,
-        180,
-        30
-    );
-
-    g.fillStyle(
-        glowColor,
-        0.28
-    );
-
-    g.fillEllipse(
-        x,
-        y,
-        90,
-        120
-    );
-
-    g.fillStyle(
-        glowColor,
-        0.9
-    );
-
-    g.fillCircle(
-        x,
-        y,
-        25
-    );
+    g.fillStyle(0x102c35, 0.95);
+    g.fillEllipse(x, y - 5, 112, 158);
+    g.lineStyle(8, mainColor, 1);
+    g.strokeEllipse(x, y - 5, 112, 158);
+    g.lineStyle(3, glowColor, 0.9);
+    g.strokeEllipse(x, y - 5, 146, 192);
+    g.fillStyle(glowColor, 0.18);
+    g.fillEllipse(x, y - 5, 86, 132);
+    g.fillStyle(glowColor, 0.85);
+    g.fillCircle(x, y - 5, 18);
+    g.fillStyle(0xfff4d3, 0.9);
+    g.fillCircle(x - 32, y - 84, 5);
+    g.fillCircle(x + 32, y - 84, 5);
 
     g.setDepth(2);
-
-    trackTween(
-        scene.tweens.add({
-            targets: g,
-            scaleX: 1.04,
-            scaleY: 1.04,
-            alpha: 0.82,
-            duration: 1500,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut"
-        })
-    );
 
     const text = trackWorld(
         scene.add.text(
@@ -1591,6 +1915,262 @@ function createMira(x, y) {
         {
             type: "mira",
             label: "Talk to Mira"
+        }
+    );
+}
+
+
+function createShoreMermaids(positions) {
+
+    const shuffledPositions =
+        Phaser.Utils.Array.Shuffle(
+            positions.slice()
+        );
+
+    const palettes = [
+        {
+            skin: 0xf3c3a7,
+            tail: 0x5fc1bb,
+            fin: 0x9ae2d1,
+            hair: 0x3d294d,
+            accent: 0xffd17c
+        },
+        {
+            skin: 0xd99b78,
+            tail: 0x8d79d8,
+            fin: 0xc4b7ff,
+            hair: 0x5a2e2e,
+            accent: 0xf4a4ba
+        },
+        {
+            skin: 0x9b664d,
+            tail: 0xe27d8e,
+            fin: 0xffb8c2,
+            hair: 0x211f3b,
+            accent: 0xffe28f
+        },
+        {
+            skin: 0xf0d1b4,
+            tail: 0x4e91c2,
+            fin: 0x8ed8f2,
+            hair: 0xc16b42,
+            accent: 0xffd67e
+        },
+        {
+            skin: 0x704936,
+            tail: 0x4aa879,
+            fin: 0x91d59e,
+            hair: 0x171b2c,
+            accent: 0xf2b6d1
+        }
+    ];
+
+    shuffledPositions.forEach(
+        ([x, y], index) => {
+
+            const shoreX =
+                x + Phaser.Math.Between(-70, 70);
+
+            const shoreY =
+                y + Phaser.Math.Between(-35, 35);
+
+            createShoreMermaid(
+                shoreX,
+                shoreY,
+                palettes[index % palettes.length],
+                0.78 + index * 0.04,
+                index % 3
+            );
+        }
+    );
+}
+
+
+function createShoreMermaid(
+    x,
+    y,
+    palette,
+    scale,
+    variant
+) {
+
+    const mermaid =
+        scene.add.container(x, y);
+
+    trackWorld(mermaid);
+    mermaid.setDepth(6);
+    mermaid.setScale(scale);
+
+    const shadow =
+        scene.add.ellipse(
+            0,
+            31,
+            52,
+            13,
+            0x17363d,
+            0.22
+        );
+
+    mermaid.add(shadow);
+
+    const tail =
+        scene.add.graphics();
+
+    tail.fillStyle(palette.tail, 1);
+    tail.beginPath();
+    tail.moveTo(-15, 7);
+    tail.lineTo(-42, 43);
+    tail.lineTo(0, 31);
+    tail.lineTo(42, 43);
+    tail.lineTo(15, 7);
+    tail.closePath();
+    tail.fillPath();
+    tail.fillStyle(palette.fin, 1);
+    tail.fillEllipse(0, 13, 24, 47);
+    mermaid.add(tail);
+
+    const torso =
+        scene.add.graphics();
+
+    torso.fillStyle(palette.skin, 1);
+    torso.fillEllipse(0, -9, 34, 42);
+    torso.fillStyle(palette.accent, 1);
+    torso.fillTriangle(-18, -13, 0, 13, 18, -13);
+    mermaid.add(torso);
+
+    const hair =
+        scene.add.graphics();
+
+    hair.fillStyle(palette.hair, 1);
+    hair.fillCircle(0, -38, 20);
+    hair.fillEllipse(-16, -15, 12, 35);
+    hair.fillEllipse(16, -15, 12, 35);
+
+    if (variant === 1) {
+        hair.fillEllipse(0, -59, 10, 17);
+    }
+
+    mermaid.add(hair);
+
+    const face =
+        scene.add.graphics();
+
+    face.fillStyle(palette.skin, 1);
+    face.fillCircle(0, -38, 15);
+    face.fillStyle(0x2d2639, 1);
+    face.fillCircle(-5, -39, 2);
+    face.fillCircle(5, -39, 2);
+    face.lineStyle(1.5, 0x9b5268, 0.9);
+    face.arc(0, -33, 5, 0.2, Math.PI - 0.2);
+    mermaid.add(face);
+
+    const accessory =
+        scene.add.graphics();
+
+    accessory.fillStyle(palette.accent, 1);
+
+    if (variant === 0) {
+        accessory.fillCircle(-17, -53, 5);
+        accessory.fillCircle(-23, -48, 4);
+        accessory.fillCircle(-11, -48, 4);
+    } else if (variant === 1) {
+        accessory.fillTriangle(-7, -55, 0, -69, 7, -55);
+        accessory.fillTriangle(5, -55, 12, -67, 17, -53);
+    } else {
+        accessory.fillEllipse(0, -58, 24, 6);
+    }
+
+    mermaid.add(accessory);
+
+    const bubbles =
+        scene.add.graphics();
+
+    bubbles.fillStyle(0xd9f8f1, 0.7);
+    bubbles.fillCircle(27, -22, 3);
+    bubbles.fillCircle(34, -34, 2);
+    bubbles.fillCircle(-27, -14, 2);
+    mermaid.add(bubbles);
+
+    trackTween(
+        scene.tweens.add({
+            targets: mermaid,
+            y: y - Phaser.Math.Between(4, 10),
+            duration: Phaser.Math.Between(1300, 1900),
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
+
+    trackTween(
+        scene.tweens.add({
+            targets: bubbles,
+            y: -8,
+            alpha: 0.15,
+            duration: 1700,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
+
+    return mermaid;
+}
+
+
+function createSeasonMermaid(
+    season,
+    name,
+    x,
+    y,
+    palette,
+    variant
+) {
+
+    const mermaid =
+        createShoreMermaid(
+            x,
+            y,
+            palette,
+            1,
+            variant
+        );
+
+    mermaid.setDepth(8);
+
+    const nameText =
+        scene.add.text(
+            0,
+            62,
+            name,
+            {
+                fontFamily: "Georgia",
+                fontSize: "15px",
+                fontStyle: "bold",
+                color: "#fff1c8",
+                stroke: "#173c45",
+                strokeThickness: 4
+            }
+        );
+
+    nameText.setOrigin(0.5);
+    mermaid.add(nameText);
+
+    const zone =
+        createInteractionZone(
+            x,
+            y,
+            150,
+            150
+        );
+
+    zone.setData(
+        "interaction",
+        {
+            type: "seasonMermaid",
+            season,
+            name,
+            label: `Talk to ${name}`
         }
     );
 }
@@ -2267,36 +2847,25 @@ function createPlayerVisual(x, y) {
         1
     );
 
-    cloak.beginPath();
-
-    cloak.moveTo(
-        -19,
-        -2
+    cloak.fillRoundedRect(
+        -22,
+        -7,
+        44,
+        35,
+        10
     );
 
-    cloak.lineTo(
+    cloak.fillStyle(
+        0x416f76,
+        1
+    );
+
+    cloak.fillEllipse(
         0,
-        -15
+        -7,
+        37,
+        17
     );
-
-    cloak.lineTo(
-        19,
-        -2
-    );
-
-    cloak.lineTo(
-        23,
-        24
-    );
-
-    cloak.lineTo(
-        -23,
-        24
-    );
-
-    cloak.closePath();
-
-    cloak.fillPath();
 
     cloak.lineStyle(
         2,
@@ -2304,7 +2873,13 @@ function createPlayerVisual(x, y) {
         0.9
     );
 
-    cloak.strokePath();
+    cloak.strokeRoundedRect(
+        -22,
+        -7,
+        44,
+        35,
+        10
+    );
 
     container.add(cloak);
 
@@ -2356,6 +2931,17 @@ function createPlayerVisual(x, y) {
 
     container.add(scarf);
 
+    const collar =
+        scene.add.graphics();
+
+    collar.fillStyle(
+        0xf1c96d,
+        1
+    );
+
+    collar.fillTriangle(-10, -10, 0, 2, 10, -10);
+    container.add(collar);
+
     const belt =
         scene.add.graphics();
 
@@ -2387,6 +2973,37 @@ function createPlayerVisual(x, y) {
 
     container.add(belt);
 
+    const neck =
+        scene.add.graphics();
+
+    neck.fillStyle(
+        0xf0c7a4,
+        1
+    );
+
+    neck.fillRoundedRect(
+        -6,
+        -18,
+        12,
+        12,
+        4
+    );
+
+    container.add(neck);
+
+    const hands =
+        scene.add.graphics();
+
+    hands.fillStyle(
+        0xf0c7a4,
+        1
+    );
+
+    hands.fillCircle(-25, 5, 5);
+    hands.fillCircle(25, 5, 5);
+
+    container.add(hands);
+
     trackTween(
         scene.tweens.add({
             targets: scarf,
@@ -2412,10 +3029,11 @@ function createPlayerVisual(x, y) {
         1
     );
 
-    face.fillCircle(
+    face.fillEllipse(
         0,
         -30,
-        18
+        30,
+        36
     );
 
     face.lineStyle(
@@ -2424,10 +3042,11 @@ function createPlayerVisual(x, y) {
         0.75
     );
 
-    face.strokeCircle(
+    face.strokeEllipse(
         0,
         -30,
-        18
+        30,
+        36
     );
 
     face.fillStyle(
@@ -2483,23 +3102,32 @@ function createPlayerVisual(x, y) {
 
     hair.fillEllipse(
         0,
-        -45,
-        31,
-        24
+        -48,
+        28,
+        17
+    );
+
+    hair.fillTriangle(
+        -12,
+        -43,
+        0,
+        -51,
+        12,
+        -43
     );
 
     hair.fillEllipse(
         -15,
-        -21,
-        7,
-        22
+        -22,
+        6,
+        20
     );
 
     hair.fillEllipse(
         15,
-        -21,
-        7,
-        22
+        -22,
+        6,
+        20
     );
 
     container.add(hair);
@@ -2575,15 +3203,16 @@ function createPlayerVisual(x, y) {
         scene.add.graphics();
 
     hood.lineStyle(
-        2,
+        1,
         0x8cb6ae,
-        0.4
+        0.16
     );
 
-    hood.strokeCircle(
+    hood.strokeEllipse(
         0,
         -31,
-        19
+        33,
+        39
     );
 
     container.add(hood);
@@ -2928,11 +3557,9 @@ function obstacleHit(
 function enterIsland(season) {
 
     gameState.island = season;
-    gameState.mode = "island";
-
     gameState.islandVisited[season] = true;
 
-    buildIsland(season);
+    transitionThroughPortal(season);
 }
 
 
@@ -2986,6 +3613,12 @@ function buildIsland(season) {
         season,
         data
     );
+
+    createShoreMermaids([
+        [170, 640],
+        [1730, 620],
+        [950, 1140]
+    ]);
 
 
     createIslandDecorations(
@@ -3775,7 +4408,65 @@ function createReturnGate(
 
 function returnToHub() {
 
-    buildHub();
+    if (worldTransitionActive) {
+        return;
+    }
+
+    worldTransitionActive = true;
+    clearMagicTransition();
+
+    const veil =
+        scene.add.rectangle(
+            scene.scale.width / 2,
+            scene.scale.height / 2,
+            scene.scale.width,
+            scene.scale.height,
+            0x071a21,
+            0
+        );
+
+    veil.setScrollFactor(0);
+    veil.setDepth(200);
+    magicTransitionObjects.push(veil);
+
+    magicTransitionTweens.push(
+        scene.tweens.add({
+            targets: veil,
+            alpha: 0.9,
+            duration: 550,
+            onComplete: () => {
+                clearMagicTransition();
+                buildHub();
+                worldTransitionActive = true;
+
+                const reveal =
+                    scene.add.rectangle(
+                        scene.scale.width / 2,
+                        scene.scale.height / 2,
+                        scene.scale.width,
+                        scene.scale.height,
+                        0x071a21,
+                        0.9
+                    );
+
+                reveal.setScrollFactor(0);
+                reveal.setDepth(200);
+                magicTransitionObjects.push(reveal);
+
+                magicTransitionTweens.push(
+                    scene.tweens.add({
+                        targets: reveal,
+                        alpha: 0,
+                        duration: 700,
+                        onComplete: () => {
+                            clearMagicTransition();
+                            worldTransitionActive = false;
+                        }
+                    })
+                );
+            }
+        })
+    );
 
     if (gameState.crystals === 3) {
 
@@ -4266,6 +4957,27 @@ function createChallengeShell(
     status.setScrollFactor(0);
     status.setDepth(104);
 
+    const statusPlate =
+        challengeAdd(
+            scene.add.rectangle(
+                panelX - panelW / 2 + 92,
+                panelY - panelH / 2 + 121,
+                164,
+                30,
+                0x071a21,
+                0.9
+            )
+        );
+
+    statusPlate.setStrokeStyle(
+        2,
+        0xf1d18b,
+        0.7
+    );
+
+    statusPlate.setScrollFactor(0);
+    statusPlate.setDepth(103);
+
 
     /* timer */
 
@@ -4288,6 +5000,27 @@ function createChallengeShell(
     timer.setScrollFactor(0);
     timer.setDepth(104);
     timer.setText("TIME  --");
+
+    const timerPlate =
+        challengeAdd(
+            scene.add.rectangle(
+                panelX + panelW / 2 - 92,
+                panelY - panelH / 2 + 121,
+                164,
+                30,
+                0x071a21,
+                0.9
+            )
+        );
+
+    timerPlate.setStrokeStyle(
+        2,
+        0x9ee8e1,
+        0.7
+    );
+
+    timerPlate.setScrollFactor(0);
+    timerPlate.setDepth(103);
 
 
     /* play area */
@@ -4604,6 +5337,8 @@ function createChallengeShell(
 
         status,
         timer,
+        statusPlate,
+        timerPlate,
         title: titleText,
         started: false,
         helpOpen: true,

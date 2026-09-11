@@ -159,38 +159,145 @@ p {
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
+    min-height: 58px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 244, 212, 0.22);
+    border-radius: 16px;
+    background: linear-gradient(105deg, rgba(8, 31, 39, 0.92), rgba(23, 75, 87, 0.76) 58%, rgba(32, 91, 91, 0.68));
+    box-shadow: 0 12px 30px rgba(7, 26, 33, 0.28), inset 0 1px 0 rgba(255, 244, 212, 0.16);
+    backdrop-filter: blur(8px);
     pointer-events: none;
     color: #e7f3e8;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: bold;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-shadow: 2px 2px 0 rgba(23, 54, 61, 0.72);
     animation: hud-arrive 500ms ease-out both;
 }
 
 .hud-title {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 17px 0 14px;
+    border-right: 1px solid rgba(241, 209, 139, 0.35);
     color: #fff1c8;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.hud-title::before {
+    content: "✦";
+    margin-right: 9px;
+    color: #f4c66d;
     font-size: 17px;
+    text-shadow: 0 0 12px rgba(244, 198, 109, 0.7);
 }
 
 .hud-item,
 .hud-objective {
-    padding: 8px 12px;
-    border: 1px solid rgba(241, 209, 139, 0.6);
-    border-radius: 8px;
-    background: rgba(23, 54, 61, 0.78);
-    box-shadow: 0 8px 22px rgba(7, 26, 33, 0.18), inset 0 1px 0 rgba(255, 244, 212, 0.1);
+    min-height: 40px;
+    padding: 7px 13px;
+    border: 1px solid rgba(241, 209, 139, 0.46);
+    border-radius: 10px;
+    background: rgba(7, 26, 33, 0.54);
+    box-shadow: inset 0 1px 0 rgba(255, 244, 212, 0.08);
+    line-height: 1.1;
+}
+
+.hud-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-width: 102px;
+    color: #a9d0c7;
+    font-size: 9px;
 }
 
 .hud-item span,
 .hud-objective span {
-    margin-left: 6px;
     color: #f4d58e;
 }
 
+.hud-item span {
+    margin-left: 0;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+}
+
 .hud-objective {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex: 1;
+    min-width: 0;
+    color: #a9d0c7;
+    font-size: 9px;
+}
+
+.hud-objective span {
+    overflow: hidden;
+    color: #fff4d4;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#controls-legend {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 11;
+    width: 150px;
+    padding: 12px 13px;
+    border: 1px solid rgba(241, 209, 139, 0.75);
+    border-radius: 10px;
+    background: rgba(7, 26, 33, 0.9);
+    box-shadow: 0 10px 28px rgba(7, 26, 33, 0.34), inset 0 1px 0 rgba(255, 244, 212, 0.12);
+    color: #e7f3e8;
+    font-size: 11px;
+    line-height: 1.2;
+    pointer-events: none;
+}
+
+.legend-title {
+    margin-bottom: 8px;
+    color: #f4c66d;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+}
+
+.legend-row {
+    display: grid;
+    grid-template-columns: 22px 22px 1fr;
+    align-items: center;
+    gap: 5px;
+    min-height: 25px;
+}
+
+.legend-key {
+    display: inline-grid;
+    min-width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 1px solid rgba(241, 209, 139, 0.75);
+    border-radius: 4px;
+    background: #355e64;
+    color: #fff4d4;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.legend-key.wide {
+    grid-column: span 2;
+    width: 49px;
+    font-size: 11px;
 }
 
 #interaction-prompt {
@@ -311,12 +418,25 @@ p {
         align-items: stretch;
         flex-wrap: wrap;
         gap: 6px;
+        padding: 7px;
+        border-radius: 12px;
     }
 
-    .hud-title,
+    .hud-title {
+        flex-basis: 100%;
+        min-height: 27px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(241, 209, 139, 0.25);
+        padding: 0 5px 6px;
+    }
+
     .hud-item,
     .hud-objective {
         font-size: 11px;
+    }
+
+    .hud-item {
+        min-width: 82px;
     }
 
     .hud-objective {
@@ -330,5 +450,13 @@ p {
 
     h1 {
         font-size: 40px;
+    }
+
+    #controls-legend {
+        right: 10px;
+        bottom: 10px;
+        width: 158px;
+        padding: 9px 10px;
+        font-size: 10px;
     }
 }

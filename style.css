@@ -166,6 +166,7 @@ p {
     font-weight: bold;
     letter-spacing: 0.08em;
     text-shadow: 2px 2px 0 rgba(23, 54, 61, 0.72);
+    animation: hud-arrive 500ms ease-out both;
 }
 
 .hud-title {
@@ -179,6 +180,7 @@ p {
     border: 1px solid rgba(241, 209, 139, 0.6);
     border-radius: 8px;
     background: rgba(23, 54, 61, 0.78);
+    box-shadow: 0 8px 22px rgba(7, 26, 33, 0.18), inset 0 1px 0 rgba(255, 244, 212, 0.1);
 }
 
 .hud-item span,
@@ -290,6 +292,18 @@ p {
 #toast.show {
     opacity: 1;
     transform: translate(-50%, 0);
+}
+
+@keyframes hud-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 700px) {

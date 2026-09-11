@@ -1,6 +1,6 @@
 /* ============================================================
    ISLES OF EVERBLOOM
-   Complete Game Logic â€” Part 1 of 2
+   Complete Game Logic - Part 1 of 2
    Phaser 3.90
    ============================================================ */
 
@@ -67,6 +67,7 @@ let challengeTweens = [];
 let challengeTimers = [];
 let challengeState = null;
 let challengeUI = null;
+let worldTransitionActive = false;
 
 
 /* ============================================================
@@ -227,7 +228,7 @@ function update(time, delta) {
         return;
     }
 
-    if (!gameState.started || gameState.paused) {
+    if (!gameState.started || gameState.paused || worldTransitionActive) {
         return;
     }
 
@@ -580,7 +581,7 @@ function talkToMira() {
 
         "Welcome to Everbloom Bay, traveller.",
 
-        "Three seasonal realms surround this island â€” Spring, Autumn and Winter.",
+        "Three seasonal realms surround this island:- Spring, Autumn and Winter.",
 
         "You do not need to follow a fixed path.",
 
@@ -615,6 +616,11 @@ function trackTween(tween) {
     }
 
     return tween;
+}
+
+function animateWorldEntry(color = 0x0b2630) {
+    scene.cameras.main.resetFX();
+    worldTransitionActive = false;
 }
 
 
@@ -716,11 +722,13 @@ function buildHub() {
 
     setObjective(
         gameState.crystals === 0
-            ? "Choose Spring, Autumn or Winter â€” any order"
+            ? "Choose Spring, Autumn or Winter in any order"
             : gameState.crystals === 3
                 ? "Everbloom is restored"
                 : "Explore another season or finish the remaining challenges"
     );
+
+    animateWorldEntry(0x174b5b);
 }
 
 
@@ -773,6 +781,21 @@ function createOcean() {
         wave.strokePath();
 
         wave.setDepth(-10);
+
+        trackTween(
+            scene.tweens.add({
+                targets: wave,
+                alpha: {
+                    from: 0.35,
+                    to: 0.9
+                },
+                duration: Phaser.Math.Between(1800, 3000),
+                delay: Phaser.Math.Between(0, 900),
+                yoyo: true,
+                repeat: -1,
+                ease: "Sine.easeInOut"
+            })
+        );
     }
 }
 
@@ -1184,6 +1207,19 @@ function createSeasonGate(
 
     g.setDepth(2);
 
+    trackTween(
+        scene.tweens.add({
+            targets: g,
+            scaleX: 1.04,
+            scaleY: 1.04,
+            alpha: 0.82,
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
+
     const text = trackWorld(
         scene.add.text(
             x,
@@ -1222,7 +1258,7 @@ function createSeasonGate(
 
 
 /* ============================================================
-   MIRA â€” IMPROVED MERMAID CHARACTER
+   MIRA — IMPROVED MERMAID CHARACTER
    ============================================================ */
 
 function createMira(x, y) {
@@ -1288,6 +1324,24 @@ function createMira(x, y) {
     );
 
     container.add(tail);
+
+    trackTween(
+        scene.tweens.add({
+            targets: tail,
+            angle: {
+                from: -3,
+                to: 3
+            },
+            scaleX: {
+                from: 0.96,
+                to: 1.04
+            },
+            duration: 1100,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
 
 
     /* Body */
@@ -1445,6 +1499,51 @@ function createMira(x, y) {
     );
 
     container.add(crown);
+
+    trackTween(
+        scene.tweens.add({
+            targets: crown,
+            y: -2,
+            angle: {
+                from: -2,
+                to: 2
+            },
+            duration: 900,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
+
+    const aura =
+        scene.add.circle(
+            0,
+            -18,
+            58,
+            0xf1d18b,
+            0.07
+        );
+
+    aura.setDepth(-1);
+    container.addAt(aura, 0);
+
+    trackTween(
+        scene.tweens.add({
+            targets: aura,
+            scale: {
+                from: 0.88,
+                to: 1.14
+            },
+            alpha: {
+                from: 0.03,
+                to: 0.14
+            },
+            duration: 1600,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
 
 
     const name =
@@ -2099,6 +2198,7 @@ function createPlayer(x, y) {
         );
 
     playerVisual.setDepth(11);
+    playerVisual.setScale(1.18);
 
     player.setVisible(
         gameState.started
@@ -2198,7 +2298,33 @@ function createPlayerVisual(x, y) {
 
     cloak.fillPath();
 
+    cloak.lineStyle(
+        2,
+        0x8cb6ae,
+        0.9
+    );
+
+    cloak.strokePath();
+
     container.add(cloak);
+
+    trackTween(
+        scene.tweens.add({
+            targets: cloak,
+            scaleX: {
+                from: 0.96,
+                to: 1.04
+            },
+            skewX: {
+                from: -0.03,
+                to: 0.03
+            },
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
 
 
     /* scarf */
@@ -2230,6 +2356,51 @@ function createPlayerVisual(x, y) {
 
     container.add(scarf);
 
+    const belt =
+        scene.add.graphics();
+
+    belt.fillStyle(
+        0x244852,
+        1
+    );
+
+    belt.fillRoundedRect(
+        -21,
+        10,
+        42,
+        6,
+        3
+    );
+
+    belt.fillStyle(
+        0xf1d18b,
+        1
+    );
+
+    belt.fillRoundedRect(
+        -4,
+        9,
+        8,
+        8,
+        2
+    );
+
+    container.add(belt);
+
+    trackTween(
+        scene.tweens.add({
+            targets: scarf,
+            angle: {
+                from: -4,
+                to: 5
+            },
+            duration: 520,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+        })
+    );
+
 
     /* face */
 
@@ -2244,7 +2415,57 @@ function createPlayerVisual(x, y) {
     face.fillCircle(
         0,
         -30,
-        17
+        18
+    );
+
+    face.lineStyle(
+        2,
+        0xb97870,
+        0.75
+    );
+
+    face.strokeCircle(
+        0,
+        -30,
+        18
+    );
+
+    face.fillStyle(
+        0xd98f83,
+        0.65
+    );
+
+    face.fillCircle(
+        -11,
+        -26,
+        2.5
+    );
+
+    face.fillCircle(
+        11,
+        -26,
+        2.5
+    );
+
+    face.lineStyle(
+        1.5,
+        0xb15e62,
+        0.9
+    );
+
+    face.lineBetween(
+        -2,
+        -25,
+        0,
+        -22
+    );
+
+    face.arc(
+        0,
+        -21,
+        5,
+        0.2,
+        Math.PI - 0.2
     );
 
     container.add(face);
@@ -2260,24 +2481,25 @@ function createPlayerVisual(x, y) {
         1
     );
 
-    hair.fillCircle(
+    hair.fillEllipse(
         0,
-        -41,
-        18
+        -45,
+        31,
+        24
     );
 
     hair.fillEllipse(
-        -14,
-        -27,
-        11,
-        29
+        -15,
+        -21,
+        7,
+        22
     );
 
     hair.fillEllipse(
-        14,
-        -27,
-        11,
-        29
+        15,
+        -21,
+        7,
+        22
     );
 
     container.add(hair);
@@ -2289,6 +2511,25 @@ function createPlayerVisual(x, y) {
         scene.add.graphics();
 
     eyes.fillStyle(
+        0xfff4dc,
+        1
+    );
+
+    eyes.fillEllipse(
+        -6,
+        -31,
+        7,
+        5
+    );
+
+    eyes.fillEllipse(
+        6,
+        -31,
+        7,
+        5
+    );
+
+    eyes.fillStyle(
         0x1e2931,
         1
     );
@@ -2296,13 +2537,33 @@ function createPlayerVisual(x, y) {
     eyes.fillCircle(
         -6,
         -31,
-        2.5
+        1.8
     );
 
     eyes.fillCircle(
         6,
         -31,
-        2.5
+        1.8
+    );
+
+    eyes.lineStyle(
+        1.5,
+        0x342c3c,
+        0.9
+    );
+
+    eyes.lineBetween(
+        -10,
+        -35,
+        -3,
+        -36
+    );
+
+    eyes.lineBetween(
+        3,
+        -36,
+        10,
+        -35
     );
 
     container.add(eyes);
@@ -2314,15 +2575,15 @@ function createPlayerVisual(x, y) {
         scene.add.graphics();
 
     hood.lineStyle(
-        3,
+        2,
         0x8cb6ae,
-        0.9
+        0.4
     );
 
     hood.strokeCircle(
         0,
         -31,
-        20
+        19
     );
 
     container.add(hood);
@@ -2787,15 +3048,17 @@ function buildIsland(season) {
     ) {
 
         setObjective(
-            `${data.name} restored â€” return to Everbloom Bay`
+            `${data.name} restored! return to Everbloom Bay`
         );
 
     } else {
 
         setObjective(
-            `Complete both ${data.shortName} challenges â€” return anytime`
+            `Complete both ${data.shortName} challenges. Return anytime.`
         );
     }
+
+    animateWorldEntry(data.background);
 }
 
 
@@ -3658,7 +3921,7 @@ function showVictory() {
 
 
 /* ============================================================
-   CHALLENGE SYSTEM â€” START
+   CHALLENGE SYSTEM — START
    ============================================================ */
 
 function openChallenge(
@@ -4083,6 +4346,27 @@ function createChallengeShell(
         24
     );
 
+    const playMask =
+        scene.make.graphics({
+            x: 0,
+            y: 0,
+            add: false
+        });
+
+    playMask.fillStyle(0xffffff);
+    playMask.fillRoundedRect(
+        playX - playW / 2 + 10,
+        playY - playH / 2 + 10,
+        playW - 20,
+        playH - 20,
+        18
+    );
+
+    const playGeometryMask =
+        playMask.createGeometryMask();
+
+    challengeObjects.push(playMask);
+
 
     const briefingShade =
         challengeAdd(
@@ -4316,6 +4600,7 @@ function createChallengeShell(
         playY,
         playW,
         playH,
+        playMask: playGeometryMask,
 
         status,
         timer,
@@ -4332,6 +4617,16 @@ function createChallengeShell(
         helpButton,
         helpText
     };
+
+    challengeTween({
+        targets: panel,
+        scale: {
+            from: 0.96,
+            to: 1
+        },
+        duration: 360,
+        ease: "Back.easeOut"
+    });
 
     function setHelpVisible(visible) {
 
@@ -4746,7 +5041,7 @@ function leaveChallenge() {
     );
 
     showToast(
-        "Challenge left â€” your progress is safe"
+        "Challenge left. Your progress is safe."
     );
 }
 
@@ -4835,12 +5130,12 @@ function updateChallenge(delta) {
 }
 
 /* ============================================================
-   PART 2 â€” THE SIX SEASONAL MINI-GAMES
+   PART 2 — THE SIX SEASONAL MINI-GAMES
    ============================================================ */
 
 
 /* ============================================================
-   HELPER â€” CHALLENGE TIMER
+   HELPER — CHALLENGE TIMER
    ============================================================ */
 
 function updateChallengeTimer(
@@ -4867,7 +5162,7 @@ function updateChallengeTimer(
             onExpire();
         } else {
             failChallenge(
-                "Time ran out â€” try again!"
+                "Time ran out. Try again!"
             );
         }
 
@@ -4879,7 +5174,7 @@ function updateChallengeTimer(
 
 
 /* ============================================================
-   HELPER â€” CREATE SMALL GLOW
+   HELPER - CREATE SMALL GLOW
    ============================================================ */
 
 function createGlow(
@@ -4894,6 +5189,7 @@ function createGlow(
         challengeAdd(
             scene.add.circle(
                 x,
+                y,
                 radius,
                 color,
                 alpha
@@ -4907,7 +5203,7 @@ function createGlow(
 
 
 /* ============================================================
-   HELPER â€” CREATE PETAL
+   HELPER - CREATE PETAL
    ============================================================ */
 
 function createPetal(
@@ -4927,6 +5223,7 @@ function createPetal(
     );
 
     petal.setDepth(104);
+    petal.setMask(challengeUI.playMask);
 
     petal.fillStyle(
         color,
@@ -5007,6 +5304,13 @@ function startPetalPath() {
 
         petals: [],
 
+        bounds: {
+            minX: ui.playX - ui.playW / 2 + 34,
+            maxX: ui.playX + ui.playW / 2 - 34,
+            minY: ui.playY - ui.playH / 2 + 34,
+            maxY: ui.playY + ui.playH / 2 - 34
+        },
+
         spirit: null,
 
         update: null
@@ -5027,6 +5331,7 @@ function startPetalPath() {
 
     spirit.setScrollFactor(0);
     spirit.setDepth(106);
+    spirit.setMask(ui.playMask);
 
     const spiritGlow =
         scene.add.circle(
@@ -5110,14 +5415,14 @@ function startPetalPath() {
 
         const x =
             Phaser.Math.Between(
-                ui.playX - ui.playW / 2 + 45,
-                ui.playX + ui.playW / 2 - 45
+                challengeState.bounds.minX,
+                challengeState.bounds.maxX
             );
 
         const y =
             Phaser.Math.Between(
-                ui.playY - ui.playH / 2 + 45,
-                ui.playY + ui.playH / 2 - 45
+                challengeState.bounds.minY,
+                challengeState.bounds.maxY
             );
 
         const petal =
@@ -5240,25 +5545,10 @@ function startPetalPath() {
             }
 
 
-            const minX =
-                ui.playX -
-                ui.playW / 2 +
-                28;
-
-            const maxX =
-                ui.playX +
-                ui.playW / 2 -
-                28;
-
-            const minY =
-                ui.playY -
-                ui.playH / 2 +
-                28;
-
-            const maxY =
-                ui.playY +
-                ui.playH / 2 -
-                28;
+            const minX = challengeState.bounds.minX;
+            const maxX = challengeState.bounds.maxX;
+            const minY = challengeState.bounds.minY;
+            const maxY = challengeState.bounds.maxY;
 
 
             spirit.x =
@@ -5317,28 +5607,28 @@ function startPetalPath() {
                             petal.x <
                             minX
                         ) {
-                            petal.x = maxX;
+                            petal.x = minX;
                         }
 
                         if (
                             petal.x >
                             maxX
                         ) {
-                            petal.x = minX;
+                            petal.x = maxX;
                         }
 
                         if (
                             petal.y <
                             minY
                         ) {
-                            petal.y = maxY;
+                            petal.y = minY;
                         }
 
                         if (
                             petal.y >
                             maxY
                         ) {
-                            petal.y = minY;
+                            petal.y = maxY;
                         }
 
 
@@ -7192,3 +7482,4 @@ window.addEventListener(
          */
     }
 );
+

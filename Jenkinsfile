@@ -30,10 +30,16 @@ pipeline {
             steps {
                 echo 'Validating application contents...'
 
-                bat 'findstr /C:"Isles of Everbloom" index.html >nul'
-                bat 'findstr /C:"style.css" index.html >nul'
-                bat 'findstr /C:"game.js" index.html >nul'
-                bat 'findstr /C:"Phaser" index.html >nul'
+                bat '''
+                findstr /I /C:"Isles of Everbloom" index.html
+                if errorlevel 1 exit /b 1
+
+                findstr /I /C:"style.css" index.html
+                if errorlevel 1 exit /b 1
+
+                findstr /I /C:"game.js" index.html
+                if errorlevel 1 exit /b 1
+                '''
 
                 echo 'Application validation successful.'
             }

@@ -12,19 +12,22 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo 'Installing project dependencies...'
-                sh 'npm ci'
+                echo 'Validating project structure...'
 
-                echo 'Checking project structure...'
-                sh 'test -f index.html'
-                sh 'test -f style.css'
-                sh 'test -f game.js'
-                sh 'test -f main.js'
-                sh 'test -f package.json'
-                sh 'test -f package-lock.json'
-                sh 'test -f Dockerfile'
+                bat 'if not exist index.html exit /b 1'
+                bat 'if not exist style.css exit /b 1'
+                bat 'if not exist game.js exit /b 1'
+                bat 'if not exist main.js exit /b 1'
+                bat 'if not exist package.json exit /b 1'
+                bat 'if not exist package-lock.json exit /b 1'
+                bat 'if not exist Dockerfile exit /b 1'
 
-                echo 'Project build validation completed.'
+                echo 'Checking JavaScript syntax...'
+
+                bat 'node --check main.js'
+                bat 'node --check game.js'
+
+                echo 'Build validation completed successfully.'
             }
         }
 
@@ -32,10 +35,10 @@ pipeline {
             steps {
                 echo 'Validating application contents...'
 
-                sh 'grep -q "Isles of Everbloom" index.html'
-                sh 'grep -q "style.css" index.html'
-                sh 'grep -q "game.js" index.html'
-                sh 'grep -q "Phaser" index.html'
+                bat 'findstr /C:"Isles of Everbloom" index.html >nul'
+                bat 'findstr /C:"style.css" index.html >nul'
+                bat 'findstr /C:"game.js" index.html >nul'
+                bat 'findstr /C:"Phaser" index.html >nul'
 
                 echo 'Application validation successful.'
             }
@@ -45,7 +48,7 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
 
-                sh 'docker build -t isles-of-everbloom:latest .'
+                bat 'docker build -t isles-of-everbloom:latest .'
             }
         }
 
@@ -53,7 +56,7 @@ pipeline {
             steps {
                 echo 'Docker image created successfully.'
 
-                sh 'docker images isles-of-everbloom:latest'
+                bat 'docker images isles-of-everbloom:latest'
             }
         }
     }
